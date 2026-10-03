@@ -95,8 +95,8 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./cicd-react-app
+          file: ./cicd-react-app/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}:latest
