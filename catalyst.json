@@ -1,0 +1,8 @@
+{
+  "appsail": [
+    {
+      "source": "docker://cicd-react-app:latest",
+      "name": "AppSail"
+    }
+  ]
+}

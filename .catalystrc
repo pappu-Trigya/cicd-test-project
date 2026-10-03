@@ -1,0 +1,30 @@
+{
+  "defaults": {
+    "project": 1,
+    "env": 1
+  },
+  "actives": {
+    "project": 1,
+    "env": 1
+  },
+  "projects": [
+    {
+      "idx": 1,
+      "id": "48380000000169005",
+      "name": "CI-CD-Pipelines",
+      "domain": {
+        "id": "10135116763",
+        "name": "ci-cd-pipelines-918810738.development"
+      },
+      "timezone": "Asia/Kolkata",
+      "env": [
+        {
+          "idx": 1,
+          "id": "918810738",
+          "name": "Development",
+          "type": 3
+        }
+      ]
+    }
+  ]
+}
