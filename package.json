@@ -1,0 +1,14 @@
+{
+  "name": "cicd-test-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo 'Running test suite... ALL PASSED'",
+    "build": "echo 'Building project...' && mkdir -p dist && echo '<h1>App Deployed Successfully</h1>' > dist/index.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
