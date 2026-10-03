@@ -1,4 +1,7 @@
 {
+  "project": {
+    "id": "4838000000169005"
+  },
   "appsail": [
     {
       "source": "docker://ghcr.io/pappu-trigya/cicd-test-project:latest",
