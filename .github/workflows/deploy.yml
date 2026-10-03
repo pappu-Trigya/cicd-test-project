@@ -16,22 +16,22 @@ on:
       deploy_target:
         description: 'Select Deployment Target'
         required: true
-        default: 'docker'
+        default: 'catalyst'
         type: choice
         options:
-          - 'docker'
-          - 'vercel'
+          - 'docker-only'
           - 'catalyst'
+          - 'vercel'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # STAGE 1: CI Check
   ci-quality-check:
     name: CI Safety and Build Verification
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -43,18 +43,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: cicd-react-app/package-lock.json
 
-      - name: Install Dependencies
-        run: cd cicd-react-app && (npm ci || npm install)
+      - name: Install & Build Check
+        run: |
+          cd cicd-react-app
+          npm ci || npm install
+          npm run build
 
-      - name: Run Build Check
-        run: cd cicd-react-app && npm run build
-
-  case-docker:
-    name: Case Docker Container Registry
+  # STAGE 2: Build & Push Docker Image
+  build-and-push-docker:
+    name: Build & Push Docker Image
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
-      (github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'docker') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'docker-only' || inputs.deploy_target == 'catalyst')) ||
       startsWith(github.ref, 'refs/tags/v')
 
     permissions:
@@ -67,9 +68,6 @@ jobs:
 
       - name: Lowercase Repository Name
         run: echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -91,29 +89,14 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.ref_name }}
 
-  case-vercel:
-    name: Case Vercel Deployment
-    needs: ci-quality-check
+  # STAGE 3: Deploy Built Image to Zoho Catalyst (AppSail)
+  deploy-to-catalyst:
+    name: Deploy Container to Zoho Catalyst
+    needs: build-and-push-docker
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'vercel'
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-
-  case-catalyst:
-    name: Case Zoho Catalyst Deployment
-    needs: ci-quality-check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'catalyst'
+    if: |
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'catalyst') ||
+      startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout Code
@@ -124,7 +107,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Catalyst CLI and Deploy
+      - name: Deploy to Catalyst AppSail
         run: |
           npm install -g zcatalyst-cli
           catalyst deploy --token ${{ secrets.CATALYST_TOKEN }}

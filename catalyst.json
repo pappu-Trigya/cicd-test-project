@@ -1,7 +1,7 @@
 {
   "appsail": [
     {
-      "source": "docker://cicd-react-app:latest",
+      "source": "docker://ghcr.io/pappu-trigya/cicd-test-project:latest",
       "name": "AppSail"
     }
   ]
