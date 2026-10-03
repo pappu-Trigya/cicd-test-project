@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # STAGE 1: CI Verification
+  # STAGE 1: CI Code Quality & Build Verification
   ci-quality-check:
     name: CI Safety and Build Verification
     runs-on: ubuntu-latest
@@ -50,7 +50,7 @@ jobs:
           npm ci || npm install
           npm run build
 
-  # STAGE 2: Build & Push Docker Image to GHCR (Optional standalone job)
+  # STAGE 2: Standalone Docker Build & Push (When manually triggering docker-only)
   build-and-push-docker:
     name: Build & Push Docker Image
     needs: ci-quality-check
@@ -88,7 +88,7 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.ref_name }}
 
-  # STAGE 3: Deploy to Catalyst AppSail
+  # STAGE 3: Build Container & Deploy to Zoho Catalyst AppSail
   deploy-to-catalyst:
     name: Deploy Container to Zoho Catalyst
     needs: ci-quality-check
@@ -96,6 +96,10 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && inputs.deploy_target == 'catalyst') ||
       startsWith(github.ref, 'refs/tags/v')
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code
@@ -116,7 +120,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build image directly in local runner memory so zcatalyst-cli can access it
+      # Build image in local runner memory and push to GHCR
       - name: Build Docker Image Locally & Push GHCR
         run: |
           docker build -t ghcr.io/${{ env.REPO_LOWER }}:latest ./cicd-react-app
