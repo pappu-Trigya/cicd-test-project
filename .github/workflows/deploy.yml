@@ -3,15 +3,15 @@ name: Universal Enterprise CI/CD Pipeline
 on:
   push:
     branches:
-      - '**' # Triggers CI check on all feature/dev branches
+      - '**'
     tags:
-      - 'v*' # DEPLOYMENT TRIGGER 1: Release tags (e.g., v1.0.0)
+      - 'v*'
   pull_request:
     branches:
       - main
       - master
       - dev
-  workflow_dispatch: # DEPLOYMENT TRIGGER 2: Manual trigger from GitHub UI
+  workflow_dispatch:
     inputs:
       deploy_target:
         description: 'Select Deployment Target'
@@ -29,11 +29,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ===============================================================
-  # STAGE 1: Code Quality, Safety & Build Verification (Runs on ALL Pushes)
-  # ===============================================================
   ci-quality-check:
-    name: 🧪 CI: Automated Code Verification
+    name: CI Automated Code Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -67,11 +64,8 @@ jobs:
             echo "No build script found, skipping build step."
           fi
 
-  # ===============================================================
-  # STAGE 2: Publish Docker Container Images (ONLY on Tags or Manual)
-  # ===============================================================
   docker-build-and-publish:
-    name: 🐳 CD: Build & Publish Container Images
+    name: CD Build & Publish Container Images
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
@@ -99,7 +93,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Case A: Monorepo Setup (Client & Server separate Dockerfiles)
       - name: Build & Push Monorepo Frontend Image
         if: hashFiles('client/Dockerfile') != ''
         uses: docker/build-push-action@v5
@@ -122,7 +115,6 @@ jobs:
             ghcr.io/${{ github.repository }}-backend:latest
             ghcr.io/${{ github.repository }}-backend:${{ github.ref_name }}
 
-      # Case B: Single Project Setup (Root Dockerfile)
       - name: Build & Push Root Project Image
         if: hashFiles('Dockerfile') != ''
         uses: docker/build-push-action@v5
@@ -134,11 +126,8 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
-  # ===============================================================
-  # STAGE 3: Production Vercel Deployment (ONLY on Tags or Manual)
-  # ===============================================================
   deploy-to-vercel:
-    name: 📐 CD: Vercel Production Deployment
+    name: CD Vercel Production Deployment
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
@@ -159,11 +148,8 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
 
-  # ===============================================================
-  # STAGE 4: Production Zoho Catalyst Deployment (ONLY on Tags or Manual)
-  # ===============================================================
   deploy-to-catalyst:
-    name: ⚡ CD: Zoho Catalyst AppSail Deployment
+    name: CD Zoho Catalyst AppSail Deployment
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
