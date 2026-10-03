@@ -1,4 +1,4 @@
-name: Universal Enterprise CI/CD Pipeline
+name: Flexible Multi-Target CI/CD Pipeline
 
 on:
   push:
@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy_target:
-        description: 'Select Deployment Target'
+        description: 'Select Deployment Target (Switch Case)'
         required: true
         default: 'docker'
         type: choice
@@ -29,8 +29,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ===============================================================
+  # STAGE 1: Common Build & CI Verification (Runs on all events)
+  # ===============================================================
   ci-quality-check:
-    name: CI Automated Code Verification
+    name: 🧪 CI: Safety & Build Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -43,34 +46,28 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Detect Repository Structure & Install Dependencies
-        run: |
-          if [ -d "client" ] && [ -d "server" ]; then
-            echo "Monorepo detected. Installing dependencies for both client and server..."
-            cd client && npm ci || npm install
-            cd ../server && npm ci || npm install
-          else
-            echo "Single project detected. Installing root dependencies..."
-            npm ci || npm install
-          fi
+      - name: Install Dependencies
+        run: npm ci || npm install
 
-      - name: Run Build Verification
+      - name: Run Build Check
         run: |
-          if [ -d "client" ]; then
-            cd client && npm run build
-          elif [ -f "package.json" ] && grep -q "\"build\":" "package.json"; then
+          if grep -q "\"build\":" "package.json"; then
             npm run build
           else
-            echo "No build script found, skipping build step."
+            echo "No build script found in package.json, skipping build step."
           fi
 
-  docker-build-and-publish:
-    name: CD Build & Publish Container Images
+  # ===============================================================
+  # CASE 'docker' (or 'all' / tag release)
+  # ===============================================================
+  case-docker:
+    name: 🐳 Case: Docker Container Registry
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
-      startsWith(github.ref, 'refs/tags/v') || 
-      (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'docker' || inputs.deploy_target == 'all'))
+      github.event_name == 'workflow_dispatch' && 
+      (inputs.deploy_target == 'docker' || inputs.deploy_target == 'all') ||
+      startsWith(github.ref, 'refs/tags/v')
 
     permissions:
       contents: read
@@ -93,30 +90,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Monorepo Frontend Image
-        if: hashFiles('client/Dockerfile') != ''
-        uses: docker/build-push-action@v5
-        with:
-          context: ./client
-          file: ./client/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}-frontend:latest
-            ghcr.io/${{ github.repository }}-frontend:${{ github.ref_name }}
-
-      - name: Build & Push Monorepo Backend Image
-        if: hashFiles('server/Dockerfile') != ''
-        uses: docker/build-push-action@v5
-        with:
-          context: ./server
-          file: ./server/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}-backend:latest
-            ghcr.io/${{ github.repository }}-backend:${{ github.ref_name }}
-
-      - name: Build & Push Root Project Image
-        if: hashFiles('Dockerfile') != ''
+      - name: Build & Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -126,21 +100,23 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
-  deploy-to-vercel:
-    name: CD Vercel Production Deployment
+  # ===============================================================
+  # CASE 'vercel' (or 'all' / tag release)
+  # ===============================================================
+  case-vercel:
+    name: 📐 Case: Vercel Deployment
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
-      secrets.VERCEL_TOKEN != '' && (
-        startsWith(github.ref, 'refs/tags/v') || 
-        (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'vercel' || inputs.deploy_target == 'all'))
-      )
+      github.event_name == 'workflow_dispatch' && 
+      (inputs.deploy_target == 'vercel' || inputs.deploy_target == 'all') ||
+      startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy to Vercel Production
+      - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -148,21 +124,23 @@ jobs:
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           vercel-args: '--prod'
 
-  deploy-to-catalyst:
-    name: CD Zoho Catalyst AppSail Deployment
+  # ===============================================================
+  # CASE 'catalyst' (or 'all' / tag release)
+  # ===============================================================
+  case-catalyst:
+    name: ⚡ Case: Zoho Catalyst Deployment
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
-      secrets.CATALYST_TOKEN != '' && (
-        startsWith(github.ref, 'refs/tags/v') || 
-        (github.event_name == 'workflow_dispatch' && (inputs.deploy_target == 'catalyst' || inputs.deploy_target == 'all'))
-      )
+      github.event_name == 'workflow_dispatch' && 
+      (inputs.deploy_target == 'catalyst' || inputs.deploy_target == 'all') ||
+      startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
