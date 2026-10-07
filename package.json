@@ -2,13 +2,25 @@
   "name": "cicd-test-project",
   "version": "1.0.0",
   "description": "",
+  "keywords": [],
+  "homepage": "https://github.com/pappu-Trigya/cicd-test-project#readme",
+  "bugs": {
+    "url": "https://github.com/pappu-Trigya/cicd-test-project/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pappu-Trigya/cicd-test-project.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
     "test": "echo 'Running test suite... ALL PASSED'",
     "build": "echo 'Building project...' && mkdir -p dist && echo '<h1>App Deployed Successfully</h1>' > dist/index.html"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "dependencies": {
+    "express": "^5.2.1",
+    "http-proxy": "^1.18.1"
+  }
 }
