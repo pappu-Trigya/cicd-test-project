@@ -10,17 +10,17 @@
   "projects": [
     {
       "idx": 1,
-      "id": "48380000000169005",
-      "name": "CI-CD-Pipelines",
+      "id": "31902000002215215",
+      "name": "ci-cd-pipelines",
       "domain": {
-        "id": "10135116763",
-        "name": "ci-cd-pipelines-918810738.development"
+        "id": "10135242117",
+        "name": "ci-cd-pipelines-905328786.development"
       },
       "timezone": "Asia/Kolkata",
       "env": [
         {
           "idx": 1,
-          "id": "918810738",
+          "id": "905328786",
           "name": "Development",
           "type": 3
         }

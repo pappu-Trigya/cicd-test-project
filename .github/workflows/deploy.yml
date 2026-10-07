@@ -129,4 +129,4 @@ jobs:
       - name: Deploy to Catalyst AppSail
         run: |
           npm install -g zcatalyst-cli
-          catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 4838000000169005 --org 918810738
+          catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 31902000002215215 --org 905328786
