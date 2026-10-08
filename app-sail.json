@@ -1,0 +1,6 @@
+{
+    "name": "AppSail",
+    "build_type": "docker",
+    "docker_file_path": "Dockerfile",
+    "port": 8080
+}
