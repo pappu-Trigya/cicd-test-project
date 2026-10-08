@@ -50,7 +50,7 @@ jobs:
           npm ci || npm install
           npm run build
 
-  # STAGE 2: Standalone Docker Build & Push (When manually triggering docker-only)
+  # STAGE 2: Standalone Docker Build & Push
   build-and-push-docker:
     name: Build & Push Docker Image
     needs: ci-quality-check
@@ -88,9 +88,9 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.ref_name }}
 
-  # STAGE 3: Build Container, Deploy to Catalyst & Promote to Production
+  # STAGE 3: Deploy to Catalyst AppSail
   deploy-to-catalyst:
-    name: Deploy Container to Zoho Catalyst & Promote to Production
+    name: Deploy Container to Zoho Catalyst AppSail
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
@@ -126,46 +126,17 @@ jobs:
           docker build -t ghcr.io/${{ env.REPO_LOWER }}:latest ./cicd-react-app
           docker push ghcr.io/${{ env.REPO_LOWER }}:latest
 
-      # 2. Deploy to Catalyst Development Environment
-      - name: Deploy to Catalyst Development
+      # 2. Deploy to Catalyst
+      - name: Deploy to Catalyst AppSail
         run: |
           npm install -g zcatalyst-cli
           catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 31902000002215215 --org 905328786
 
-      # 3. Automatically promote AppSail build to Production
-      - name: Promote AppSail to Production
+      # 3. Post-Deployment Instructions
+      - name: Production Promotion Notice
         run: |
-          echo "Promoting AppSail ID 31902000002208788 to Production..."
-
-          ENDPOINTS=(
-            "https://api.catalyst.zoho.in/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
-            "https://api.catalyst.zoho.com/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
-            "https://console.catalyst.zoho.com/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
-          )
-
-          PROMOTED=false
-
-          for URL in "${ENDPOINTS[@]}"; do
-            echo "Testing Endpoint: $URL"
-            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$URL" \
-              -H "Authorization: Zoho-oauthtoken ${{ secrets.CATALYST_TOKEN }}" \
-              -H "catalyst-org-id: 905328786" \
-              -H "Content-Type: application/json")
-
-            HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-            BODY=$(echo "$RESPONSE" | sed '$d')
-
-            echo "Status Code: $HTTP_STATUS"
-            echo "Response Body: $BODY"
-
-            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
-              echo "Successfully triggered Production deployment!"
-              PROMOTED=true
-              break
-            fi
-          done
-
-          if [ "$PROMOTED" = false ]; then
-            echo "Direct API trigger completed with non-2xx response status."
-            echo "Development deployment succeeded. Please check the Catalyst Production console if manual confirmation is required."
-          fi
+          echo "=========================================================="
+          echo " SUCCESS: Deployed latest container to Catalyst!"
+          echo " Catalyst Console: https://console.catalyst.zoho.com/baas/905328786/project/31902000002215215/Production#/serverless/appsail/31902000002208788/deployment"
+          echo " To promote live to Production: Open the link above and click 'Create Deployment'."
+          echo "=========================================================="
