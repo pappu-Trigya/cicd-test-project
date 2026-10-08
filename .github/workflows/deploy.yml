@@ -88,9 +88,9 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.ref_name }}
 
-  # STAGE 3: Build Container & Deploy to Zoho Catalyst AppSail
+  # STAGE 3: Build Container, Deploy to Catalyst & Promote to Production
   deploy-to-catalyst:
-    name: Deploy Container to Zoho Catalyst
+    name: Deploy Container to Zoho Catalyst & Promote to Production
     needs: ci-quality-check
     runs-on: ubuntu-latest
     if: |
@@ -120,13 +120,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build image in local runner memory and push to GHCR
+      # 1. Build Docker image and push to GHCR
       - name: Build Docker Image Locally & Push GHCR
         run: |
           docker build -t ghcr.io/${{ env.REPO_LOWER }}:latest ./cicd-react-app
           docker push ghcr.io/${{ env.REPO_LOWER }}:latest
 
-      - name: Deploy to Catalyst AppSail
+      # 2. Deploy to Catalyst Development Environment
+      - name: Deploy to Catalyst Development
         run: |
           npm install -g zcatalyst-cli
-          catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 31902000002215215 --org 905328786 
+          catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 31902000002215215 --org 905328786
+
+      # 3. Automatically promote Development deployment to Production via Catalyst API
+      - name: Promote AppSail to Production
+        run: |
+          echo "Promoting latest AppSail deployment to Production..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.catalyst.zoho.com/baas/v1/project/31902000002215215/appsail/AppSail/promote" \
+            -H "Authorization: Zoho-oauthtoken ${{ secrets.CATALYST_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"target_environment": "production"}')
+
+          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response Status: $HTTP_STATUS"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+            echo "Successfully promoted AppSail to Production!"
+          else
+            echo "Failed to promote to Production automatically. Please verify in Catalyst Console."
+            exit 1
+          fi
