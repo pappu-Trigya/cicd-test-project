@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  Battery, 
-  BatteryCharging, 
-  Globe, 
-  MapPin, 
-  Monitor, 
-  RefreshCw, 
-  Send, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Activity,
+  Battery,
+  BatteryCharging,
+  Globe,
+  MapPin,
+  Monitor,
+  RefreshCw,
+  Send,
+  CheckCircle2,
+  XCircle,
   Terminal,
   Layers,
   Clock
@@ -23,8 +23,8 @@ export default function App() {
   const [status, setStatus] = useState(null);
   const [logs, setLogs] = useState([]);
 
-  // Deployment configuration markers
-  const BUILD_VERSION = "v1.0.5-live";
+  // Deployment configuration markers — Version bumped to verify pipeline deployment
+  const BUILD_VERSION = "v1.0.6-live";
   const BUILD_TIMESTAMP = new Date().toLocaleTimeString();
 
   const addLog = (msg, type = 'info') => {
@@ -120,7 +120,7 @@ export default function App() {
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status} - Endpoint not reachable.`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}: Endpoint not reachable.`);
 
         const data = await res.json();
         addLog("Payload delivered to live server!", "success");
@@ -141,7 +141,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 font-sans">
       <div className="max-w-5xl mx-auto space-y-6">
-        
+
         {/* Header Bar */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl gap-4">
           <div>
@@ -168,11 +168,11 @@ export default function App() {
         <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={useMockBackend} 
+              <input
+                type="checkbox"
+                checked={useMockBackend}
                 onChange={(e) => setUseMockBackend(e.target.checked)}
-                className="sr-only peer" 
+                className="sr-only peer"
               />
               <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
             </label>
@@ -184,7 +184,7 @@ export default function App() {
           <button
             onClick={handleExecuteTracking}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-medium text-sm rounded-lg transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-medium text-sm rounded-lg transition-all shadow-lg shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
           >
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {loading ? "Running Verification..." : "Run Live Verification Push"}
@@ -193,7 +193,7 @@ export default function App() {
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
+
           {/* Device Metrics Card */}
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -202,7 +202,7 @@ export default function App() {
               </span>
               <span className="text-xs text-slate-500">Hardware</span>
             </div>
-            
+
             <div className="space-y-3 text-sm">
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Battery Level</span>
@@ -287,9 +287,9 @@ export default function App() {
             <span className="text-xs font-mono font-semibold text-slate-400 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-indigo-400" /> Pipeline Verification Console Logs
             </span>
-            <button 
+            <button
               onClick={() => setLogs([])}
-              className="text-xs text-slate-500 hover:text-slate-300 transition"
+              className="text-xs text-slate-500 hover:text-slate-300 transition cursor-pointer"
             >
               Clear Logs
             </button>
@@ -304,8 +304,8 @@ export default function App() {
                   <span className="text-slate-600 shrink-0">[{log.timestamp}]</span>
                   <span className={
                     log.type === 'success' ? 'text-emerald-400' :
-                    log.type === 'error' ? 'text-rose-400' :
-                    log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'
+                      log.type === 'error' ? 'text-rose-400' :
+                        log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'
                   }>
                     {log.msg}
                   </span>
