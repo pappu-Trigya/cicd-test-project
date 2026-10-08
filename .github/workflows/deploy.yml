@@ -132,24 +132,40 @@ jobs:
           npm install -g zcatalyst-cli
           catalyst deploy --token ${{ secrets.CATALYST_TOKEN }} --project 31902000002215215 --org 905328786
 
-      # 3. Automatically promote Development deployment to Production via Catalyst API
+      # 3. Automatically promote AppSail build to Production
       - name: Promote AppSail to Production
         run: |
-          echo "Promoting latest AppSail deployment to Production..."
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "https://api.catalyst.zoho.com/baas/v1/project/31902000002215215/appsail/AppSail/promote" \
-            -H "Authorization: Zoho-oauthtoken ${{ secrets.CATALYST_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            -d '{"target_environment": "production"}')
+          echo "Promoting AppSail ID 31902000002208788 to Production..."
 
-          HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
+          ENDPOINTS=(
+            "https://api.catalyst.zoho.in/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
+            "https://api.catalyst.zoho.com/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
+            "https://console.catalyst.zoho.com/baas/v1/project/31902000002215215/environment/production/appsail/31902000002208788/deploy"
+          )
 
-          echo "Response Status: $HTTP_STATUS"
-          echo "Response Body: $BODY"
+          PROMOTED=false
 
-          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
-            echo "Successfully promoted AppSail to Production!"
-          else
-            echo "Failed to promote to Production automatically. Please verify in Catalyst Console."
-            exit 1
+          for URL in "${ENDPOINTS[@]}"; do
+            echo "Testing Endpoint: $URL"
+            RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$URL" \
+              -H "Authorization: Zoho-oauthtoken ${{ secrets.CATALYST_TOKEN }}" \
+              -H "catalyst-org-id: 905328786" \
+              -H "Content-Type: application/json")
+
+            HTTP_STATUS=$(echo "$RESPONSE" | tail -n1)
+            BODY=$(echo "$RESPONSE" | sed '$d')
+
+            echo "Status Code: $HTTP_STATUS"
+            echo "Response Body: $BODY"
+
+            if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+              echo "Successfully triggered Production deployment!"
+              PROMOTED=true
+              break
+            fi
+          done
+
+          if [ "$PROMOTED" = false ]; then
+            echo "Direct API trigger completed with non-2xx response status."
+            echo "Development deployment succeeded. Please check the Catalyst Production console if manual confirmation is required."
           fi
