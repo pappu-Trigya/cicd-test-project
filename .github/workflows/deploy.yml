@@ -170,7 +170,7 @@ jobs:
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: ./cicd-react-app
 
-  # STAGE 3C: Deploy to AWS (ECR / S3 CloudFront)
+  # STAGE 3C: Deploy to AWS S3
   deploy-to-aws:
     name: Deploy App to AWS
     needs: ci-quality-check
@@ -188,13 +188,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Build & Sync Static Assets to S3 (Option A: Static Hosting)
+      - name: Build & Sync Static Assets to S3
         run: |
           cd cicd-react-app
           npm ci || npm install
           npm run build
           aws s3 sync build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }} --delete
 
-      # Verification step: Ensure AWS CLI operation succeeded
       - name: Verify AWS S3 Sync
         run: echo "AWS S3 Sync completed successfully."
