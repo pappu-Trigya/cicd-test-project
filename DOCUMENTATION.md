@@ -1,12 +1,12 @@
-# Multi-Target CI/CD Pipeline Documentation
+# Complete Multi-Target CI/CD Pipeline & Operations Manual
 
 ## Overview
 
-This repository uses a multi-target GitHub Actions workflow (`.github/workflows/deploy.yml`) designed for modern web applications. It validates code quality, builds Docker images, publishes artifacts to GitHub Container Registry (GHCR), and supports targeted deployments to **Zoho Catalyst (AppSail)**, **Vercel**, and **AWS (S3)**.
+This repository (`pappu-Trigya/cicd-test-project`) contains a fully automated multi-target GitHub Actions CI/CD pipeline (`.github/workflows/deploy.yml`). It validates code quality, builds Docker images, publishes container artifacts to GitHub Container Registry (GHCR), and supports targeted deployments to **Zoho Catalyst (AppSail)**, **Vercel**, and **AWS (S3)**.
 
 ---
 
-## Architecture & Workflow Strategy
+## 1. Architecture & Workflow Strategy
 
 ```
                       ┌────────────────────────┐
@@ -35,98 +35,138 @@ This repository uses a multi-target GitHub Actions workflow (`.github/workflows/
 └─────────────────┘
 ```
 
-### Environment Isolation Policy (Zoho Catalyst)
-* **Development Sandbox:** Automated via `zcatalyst-cli` during CI/CD execution.
-* **Production Environment:** Immutable by policy. Catalyst does not allow direct CLI or API cross-environment deployments to Production. Once a build is deployed to Development, it must be promoted via the **Catalyst Console**.
+### Key Policies & Rules
+* **Dynamic Secret Evaluation:** GitHub Actions evaluates secrets per job execution. Unused target secrets (e.g., AWS or Vercel keys during a Catalyst run) are **not required**.
+* **Zoho Catalyst Environment Isolation:** Builds deploy automatically to the **Development** sandbox. Direct deployment to Production via API/CLI is restricted by Zoho policy; manual promotion via the **Catalyst Console** is required.
 
 ---
 
-## Prerequisites & Repository Secrets
+## 2. Secrets & Repository Variables
 
-Secrets are loaded dynamically. You only need to configure the secrets for the target(s) you intend to use.
-
-| Secret Name | Required For | Description |
+| Secret / Variable Name | Required For Target | Description |
 | :--- | :--- | :--- |
 | `CATALYST_TOKEN` | Zoho Catalyst | Generated via `catalyst login:ci` |
 | `VERCEL_TOKEN` | Vercel | Vercel Personal Access Token |
-| `AWS_ACCESS_KEY_ID` | AWS | AWS IAM Access Key |
-| `AWS_SECRET_ACCESS_KEY` | AWS | AWS IAM Secret Key |
-| `AWS_S3_BUCKET_NAME` | AWS | Destination S3 Bucket Name |
+| `AWS_ACCESS_KEY_ID` | AWS S3 | IAM Access Key |
+| `AWS_SECRET_ACCESS_KEY` | AWS S3 | IAM Secret Key |
+| `AWS_S3_BUCKET_NAME` | AWS S3 | Target S3 Bucket Name |
 
 ---
 
-## Local Development & Operations Manual
+## 3. Essential Operations Command Cheat Sheet
 
-### 1. Local Application Setup
+### A. Local React App Commands
 
 ```bash
-# Navigate to the frontend application directory
+# Navigate to application directory
 cd cicd-react-app
 
 # Install project dependencies
 npm install
 
-# Start the local development server
+# Start local development server (http://localhost:3000)
 npm start
 
-# Run local production build check
+# Verify local production build
 npm run build
+
+# Return to repository root
+cd ..
 ```
 
----
-
-### 2. Docker Operations
+### B. Git Operations
 
 ```bash
-# Build local Docker image (from repo root)
+# Check status and current branch
+git status
+git branch -a
+
+# Create and switch to a new development branch
+git checkout -b feature/workflow-updates
+
+# Stage, commit, and push changes
+git add .
+git commit -m "feat: configure multi-target pipeline"
+git push -u origin feature/workflow-updates
+
+# Create and push release tag (Triggers Catalyst Deployment)
+git tag -a v1.0.0 -m "Release version 1.0.0"
+git push origin v1.0.0
+
+# Delete local and remote tags (if needed)
+git tag -d v1.0.0
+git push origin :refs/tags/v1.0.0
+```
+
+### C. Docker Operations (Run from Repo Root)
+
+```bash
+# Build local Docker image
 docker build -t cicd-react-app:local ./cicd-react-app
 
-# Run Docker container locally on port 3000
-docker run -d -p 3000:3000 -e X_ZOHO_CATALYST_LISTEN_PORT=3000 cicd-react-app:local
+# Run container locally on port 3000
+docker run -d \
+  -p 3000:3000 \
+  -e X_ZOHO_CATALYST_LISTEN_PORT=3000 \
+  --name react-container \
+  cicd-react-app:local
 
-# Verify running container status
+# Verify running container status and logs
 docker ps
+docker logs -f react-container
 
-# Test container endpoint
+# Test local endpoint
 curl -I http://localhost:3000
+
+# Stop and remove local container
+docker stop react-container
+docker rm react-container
 ```
 
----
-
-### 3. Zoho Catalyst CLI Operations
+### D. GitHub Container Registry (GHCR) Commands
 
 ```bash
-# Install Catalyst CLI globally
+# Authenticate to GHCR
+echo $GH_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+
+# Tag and push image manually to GHCR
+docker tag cicd-react-app:local ghcr.io/pappu-trigya/cicd-test-project:latest
+docker push ghcr.io/pappu-trigya/cicd-test-project:latest
+```
+
+### E. GitHub CLI (`gh`) Commands
+
+```bash
+# Authenticate GitHub CLI
+gh auth login
+
+# Trigger specific pipeline targets manually
+gh workflow run deploy.yml -f deploy_target=catalyst
+gh workflow run deploy.yml -f deploy_target=vercel
+gh workflow run deploy.yml -f deploy_target=aws
+gh workflow run deploy.yml -f deploy_target=docker-only
+
+# Watch live pipeline logs in terminal
+gh run watch
+```
+
+### F. Zoho Catalyst CLI Commands
+
+```bash
+# Install CLI globally
 npm install -g zcatalyst-cli
 
-# Generate CI/CD Token for GitHub Actions
+# Generate CI access token for GitHub secrets
 catalyst login:ci
 
-# Login locally to Catalyst account
+# Login locally and deploy manually
 catalyst login
-
-# Target project environment and deploy manually
 catalyst deploy --project 31902000002215215 --org 905328786
 ```
 
 ---
 
-### 4. Git Release & Deployment Triggers
-
-```bash
-# Create and push a release tag (triggers automatic Catalyst deployment)
-git tag -a v1.0.0 -m "Release version 1.0.0"
-git push origin v1.0.0
-
-# Manually triggering via GitHub CLI
-gh workflow run deploy.yml -f deploy_target=catalyst
-gh workflow run deploy.yml -f deploy_target=vercel
-gh workflow run deploy.yml -f deploy_target=aws
-```
-
----
-
-## Complete Workflow Configuration (`.github/workflows/deploy.yml`)
+## 4. Complete Workflow File (`.github/workflows/deploy.yml`)
 
 ```yaml
 name: Flexible Multi-Target CI/CD Pipeline
@@ -270,7 +310,7 @@ jobs:
           echo " Note: Per Zoho Catalyst policy, open the link above and click 'Create Deployment' / 'Promote' to publish to Production."
           echo "=========================================================="
 
-  # STAGE 3B: Deploy to Vercel (Production)
+  # STAGE 3B: Deploy to Vercel (Preview / Production)
   deploy-to-vercel:
     name: Deploy App to Vercel
     needs: ci-quality-check
@@ -332,9 +372,9 @@ jobs:
 
 ---
 
-## Production Promotion Runbook (Zoho Catalyst)
+## 5. Catalyst Production Promotion Runbook
 
-1. **Pipeline Execution:** Trigger the GitHub Action workflow manually or push a release tag (`v1.0.x`).
-2. **Verification:** Confirm that the `deploy-to-catalyst` job completes with status `Success`.
-3. **Console Access:** Open the [Zoho Catalyst AppSail Deployment Console](https://console.catalyst.zoho.com/baas/905328786/project/31902000002215215/Production#/serverless/appsail/31902000002208788/deployment).
-4. **Promotion:** Select the latest build from the Development environment list and click **Create Deployment** to promote it live to Production.
+1. Push a release tag (`v1.0.x`) or run `gh workflow run deploy.yml -f deploy_target=catalyst`.
+2. Ensure the GitHub Actions run finishes with a green `Success` status.
+3. Access the [Zoho Catalyst AppSail Console](https://console.catalyst.zoho.com/baas/905328786/project/31902000002215215/Production#/serverless/appsail/31902000002208788/deployment).
+4. Select the newly built Development package and click **Create Deployment / Promote** to go live in Production.

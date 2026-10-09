@@ -24,7 +24,7 @@ export default function App() {
   const [logs, setLogs] = useState([]);
 
   // Deployment configuration markers — Version bumped to verify pipeline deployment
-  const BUILD_VERSION = "v1.0.26-live";
+  const BUILD_VERSION = "v1.0.27-live";
   const BUILD_TIMESTAMP = new Date().toLocaleTimeString();
 
   const addLog = (msg, type = 'info') => {
